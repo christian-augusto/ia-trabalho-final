@@ -9,9 +9,9 @@ func main() {
 	parsedLinesLimit := -1
 	filePath := "input/casos_obitos_doencas_preexistentes.csv"
 	columns := []models.Column{
-		*models.NewColumn("idade", []string{"child", "teen", "young", "adult", "elderly"}),
-		*models.NewColumn("cs_sexo", []string{"masculino", "feminino"}),
 		*models.NewColumn("obito", []string{"1", "0"}),
+		*models.NewColumn("idade", []string{"crianca", "adolescente", "jovem", "adulto", "idoso"}),
+		*models.NewColumn("cs_sexo", []string{"m", "f"}),
 		*models.NewColumn("asma", []string{"1", "0"}),
 		*models.NewColumn("cardiopatia", []string{"1", "0"}),
 		*models.NewColumn("diabetes", []string{"1", "0"}),

@@ -39,7 +39,8 @@ func (cta *csvToArff) Parse() error {
 
 	defer csvFile.Close()
 
-	arffFile, err = os.Create("output/casos_obitos_doencas_preexistentes.arff")
+	// arffFile, err = os.Create("output/casos_obitos_doencas_preexistentes.arff")
+	arffFile, err = os.Create("output/" + cta.customName() + ".arff")
 
 	if err != nil {
 		return err
@@ -76,9 +77,13 @@ func (cta *csvToArff) Parse() error {
 	for scanner.Scan() {
 		line := strings.Split(scanner.Text(), cta.csvSeparator)
 
+		if lineNumber%1000 == 0 {
+			fmt.Print(".")
+		}
+
 		if lineNumber == 1 {
 			for columnIndex, value := range line {
-				currentColumnIndex := indexOfColumnName(cta.columns, value)
+				currentColumnIndex := cta.indexOfColumnName(cta.columns, value)
 
 				if currentColumnIndex != -1 {
 					cta.columns[currentColumnIndex].IndexOnCsv = columnIndex
@@ -89,7 +94,7 @@ func (cta *csvToArff) Parse() error {
 			err = nil
 
 			for i, column := range cta.columns {
-				values[i], err = processColumn(column, line)
+				values[i], err = cta.processColumn(column, line)
 
 				if err != nil {
 					break
@@ -114,6 +119,8 @@ func (cta *csvToArff) Parse() error {
 		lineNumber++
 	}
 
+	fmt.Print("\n")
+
 	fmt.Printf("Total lines: %v\n", lineNumber)
 	fmt.Printf("Lines parsed: %v\n", parsedLines)
 
@@ -124,7 +131,7 @@ func (cta *csvToArff) Parse() error {
 	return err
 }
 
-func processColumn(column models.Column, line []string) (string, error) {
+func (cta *csvToArff) processColumn(column models.Column, line []string) (string, error) {
 	var err error
 
 	value := line[column.IndexOnCsv]
@@ -135,33 +142,35 @@ func processColumn(column models.Column, line []string) (string, error) {
 
 	switch column.Name {
 	case "idade":
-		value, err = convertAge(value)
+		value, err = cta.convertAge(value)
+	case "cs_sexo":
+		value = cta.convertGender(value)
 	case "asma":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "cardiopatia":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "diabetes":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "doenca_hematologica":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "doenca_hepatica":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "doenca_neurologica":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "doenca_renal":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "imunodepressao":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "obesidade":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "outros_fatores_de_risco":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "pneumopatia":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "puerpera":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	case "sindrome_de_down":
-		value = convertBoolean(value)
+		value = cta.convertBoolean(value)
 	}
 
 	if err != nil {
@@ -169,7 +178,7 @@ func processColumn(column models.Column, line []string) (string, error) {
 	}
 
 	if column.AllowedValues != nil {
-		if indexOfString(column.AllowedValues, value) == -1 {
+		if cta.indexOfString(column.AllowedValues, value) == -1 {
 			return "", fmt.Errorf("%v is not allowed to column %v", value, column.Name)
 		}
 	}
@@ -177,17 +186,21 @@ func processColumn(column models.Column, line []string) (string, error) {
 	return value, err
 }
 
-func convertBoolean(value string) string {
-	if value == "sim" {
-		return "1"
-	} else if value == "nao" {
-		return "0"
+func (cta *csvToArff) customName() string {
+	var name string
+
+	if len(cta.columns) > 0 {
+		name = cta.columns[0].Name
 	}
 
-	return value
+	for i := 1; i < len(cta.columns); i++ {
+		name += "-" + cta.columns[i].Name
+	}
+
+	return name
 }
 
-func convertAge(value string) (string, error) {
+func (cta *csvToArff) convertAge(value string) (string, error) {
 	var age int
 	var err error
 
@@ -198,19 +211,39 @@ func convertAge(value string) (string, error) {
 	}
 
 	if age < 13 {
-		return "child", err
+		return "crianca", err
 	} else if age < 20 {
-		return "teen", err
+		return "adolescente", err
 	} else if age < 36 {
-		return "young", err
+		return "jovem", err
 	} else if age < 60 {
-		return "adult", err
+		return "adulto", err
 	} else {
-		return "elderly", err
+		return "idoso", err
 	}
 }
 
-func indexOfString(array []string, target string) int {
+func (cta *csvToArff) convertBoolean(value string) string {
+	if value == "sim" {
+		return "1"
+	} else if value == "nao" {
+		return "0"
+	}
+
+	return value
+}
+
+func (cta *csvToArff) convertGender(value string) string {
+	if value == "masculino" {
+		return "m"
+	} else if value == "feminino" {
+		return "f"
+	}
+
+	return value
+}
+
+func (cta *csvToArff) indexOfString(array []string, target string) int {
 	for i, value := range array {
 		if value == target {
 			return i
@@ -220,7 +253,7 @@ func indexOfString(array []string, target string) int {
 	return -1
 }
 
-func indexOfColumnName(array []models.Column, target string) int {
+func (cta *csvToArff) indexOfColumnName(array []models.Column, target string) int {
 	for i, value := range array {
 		if value.Name == target {
 			return i
